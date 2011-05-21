@@ -477,6 +477,34 @@ index 3e999f3..5c8517b 100644
 +    newscript->pGOUse = &GOUse_go_vashj_bridge_console;
 +    newscript->RegisterSelf();
  }
+diff --git a/scripts/outland/coilfang_reservoir/serpent_shrine/serpent_shrine.h b/scripts/outland/coilfang_reservoir/serpent_shrine/serpent_shrine.h
+index b7bde5f..9b8bd43 100644
+--- a/scripts/outland/coilfang_reservoir/serpent_shrine/serpent_shrine.h
++++ b/scripts/outland/coilfang_reservoir/serpent_shrine/serpent_shrine.h
+@@ -26,6 +26,22 @@ enum
+     TYPE_SHIELDGENERATOR1           = 20,
+     TYPE_SHIELDGENERATOR2           = 21,
+     TYPE_SHIELDGENERATOR3           = 22,
+-    TYPE_SHIELDGENERATOR4           = 23
++    TYPE_SHIELDGENERATOR4           = 23,
++
++    TYPE_VASHJ_BRIDGE_CONSOLE        = 24,
++
++    SPELL_SCALDING_WATER    = 37284,
++
++    NPC_COILFANG_FRENZY        = 21508,
++
++    GO_HYDROSS_CONSOLE        = 185115,
++    GO_LURKER_CONSOLE        = 185116,
++    GO_MOROGRIM_CONSOLE        = 185117,
++    GO_KARATHRESS_CONSOLE    = 185118,
++    GO_LEOTHERAS_CONSOLE    = 185114,
++    GO_VASHJ_BRIDGE_CONSOLE = 184568,
++    GO_VASHJ_BRIDGE_ONE     = 184203,
++    GO_VASHJ_BRIDGE_TWO     = 184204,
++    GO_VASHJ_BRIDGE_THREE   = 184205,
+ };
+ #endif
 diff --git a/scripts/outland/coilfang_reservoir/serpent_shrine/console.sql b/scripts/outland/coilfang_reservoir/serpent_shrine/console.sql
 new file mode 100644
 --- /dev/null
