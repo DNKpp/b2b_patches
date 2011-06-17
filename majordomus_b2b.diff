@@ -1,5 +1,5 @@
 diff --git a/scripts/eastern_kingdoms/molten_core/boss_majordomo_executus.cpp b/scripts/eastern_kingdoms/molten_core/boss_majordomo_executus.cpp
-index 7d0d57f..117bb4e 100644
+index 7d0d57f..5a0c380 100644
 --- a/scripts/eastern_kingdoms/molten_core/boss_majordomo_executus.cpp
 +++ b/scripts/eastern_kingdoms/molten_core/boss_majordomo_executus.cpp
 @@ -16,8 +16,8 @@
@@ -289,7 +289,7 @@ index 7d0d57f..117bb4e 100644
 +                        // Summon Ragnaros
 +                        if (m_pInstance)
 +                            if (GameObject* pGo = m_pInstance->instance->GetGameObject(m_pInstance->GetData64(GO_LAVA_STEAM)))
-+                                m_creature->SummonCreature(NPC_RAGNAROS, pGo->GetPositionX(), pGo->GetPositionY(), pGo->GetPositionZ(), fmod(m_creature->GetOrientation() + M_PI, 2*M_PI), TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 2*HOUR*IN_MILLISECONDS);
++                                m_creature->SummonCreature(NPC_RAGNAROS, pGo->GetPositionX(), pGo->GetPositionY(), pGo->GetPositionZ(), fmod(m_creature->GetOrientation() + M_PI, 2*M_PI), TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, 2*HOUR*IN_MILLISECONDS, false, 50000);
 +                        ++m_uiSpeech;
 +                        m_uiSpeechTimer = 8700;
 +                        break;
@@ -397,8 +397,7 @@ index 7d0d57f..117bb4e 100644
      pNewScript->GetAI = &GetAI_boss_majordomo;
      pNewScript->RegisterSelf();
  }
-diff --git a/scripts/eastern_kingdoms/molten_core/majordomus.sql b/scripts/eastern_kingdoms/molten_core/majordomus.sql
-new file mode 100644
+
 --- /dev/null
 +++ b/scripts/eastern_kingdoms/molten_core/majordomus.sql
 @@ -0,0 +1,7 @@
