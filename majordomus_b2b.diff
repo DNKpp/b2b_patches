@@ -413,27 +413,17 @@ index 7d0d57f..a1b6459 100644
      pNewScript->GetAI = &GetAI_boss_majordomo;
      pNewScript->RegisterSelf();
  }
-
 diff --git a/scripts/eastern_kingdoms/molten_core/majordomus.sql b/scripts/eastern_kingdoms/molten_core/majordomus.sql
 new file mode 100644
 --- /dev/null
 +++ b/scripts/eastern_kingdoms/molten_core/majordomus.sql
-@@ -0,0 +1,14 @@
-+ -- adds eventAI
-+INSERT INTO `creature_ai_scripts` VALUES ('1166404', '11664', '4', '0', '100', '0', '0', '0', '0', '0', '39', '50', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', 'Flamewaker Elite - Call for help');
-+INSERT INTO `creature_ai_scripts` VALUES ('1166303', '11663', '4', '0', '100', '0', '0', '0', '0', '0', '39', '50', '0', '0', '0', '0', '0', '0', '0', '0', '0', '0', 'Flamewaker Healer - Call for help');
-+
-+UPDATE `creature_template` SET  `MovementType` =  '0' WHERE  `creature_template`.`entry` =12018;
-+UPDATE `creature_template` SET  `MovementType` =  '0' WHERE  `creature_template`.`entry` =11663;
-+UPDATE `creature_template` SET  `MovementType` =  '0' WHERE  `creature_template`.`entry` =11664;
-+
-+UPDATE `creature_template` SET  `faction_A` =  '54', `faction_H` =  '54' WHERE  `creature_template`.`entry` =11664;
-+UPDATE `creature_template` SET  `faction_A` =  '54', `faction_H` =  '54' WHERE  `creature_template`.`entry` =11663;
+@@ -0,0 +1,6 @@
++UPDATE `creature_template` SET  `MovementType` =  '0', `faction_A` =  '54', `faction_H` =  '54' WHERE  `creature_template`.`entry` =12018;
++UPDATE `creature_template` SET  `MovementType` =  '0', `faction_A` =  '54', `faction_H` =  '54' WHERE  `creature_template`.`entry` =11663;
++UPDATE `creature_template` SET  `MovementType` =  '0', `faction_A` =  '54', `faction_H` =  '54' WHERE  `creature_template`.`entry` =11664;
 +
 + -- hot coel (trap)
-+UPDATE  `mangosd`.`gameobject_template` SET  `type` =  '6', `data2` =  '20' `data3` =  '20532', `data5` =  '1', `data11` =  '11' WHERE  `gameobject_template`.`entry` =177000;
-+
-
++UPDATE `gameobject_template` SET  `type` =  '6', `data2` =  '20' `data3` =  '20532', `data5` =  '1', `data11` =  '11' WHERE  `gameobject_template`.`entry` =177000;
 diff --git a/scripts/eastern_kingdoms/molten_core/scripted_textes.sql b/scripts/eastern_kingdoms/molten_core/scripted_textes.sql
 new file mode 100644
 --- /dev/null
@@ -462,4 +452,3 @@ new file mode 100644
 +UPDATE `script_texts` SET `entry` = -1409023,`content_default` = 'Very well, $N.',`content_loc1` = NULL,`content_loc2` = NULL,`content_loc3` = NULL,`content_loc4` = NULL,`content_loc5` = NULL,`content_loc6` = NULL,`content_loc7` = NULL,`content_loc8` = NULL,`sound` = 0,`type` = 0,`language` = 0,`emote` = 0,`comment` = 'majordomo SAY_SUMMON_0' WHERE `script_texts`.`entry` = -1409023;
 +UPDATE `script_texts` SET `entry` = -1409024,`content_default` = 'Impudent whelps! You''ve rushed headlong to your own deaths! See now, the master stirs!',`content_loc1` = NULL,`content_loc2` = NULL,`content_loc3` = NULL,`content_loc4` = NULL,`content_loc5` = NULL,`content_loc6` = NULL,`content_loc7` = NULL,`content_loc8` = NULL,`sound` = 0,`type` = 1,`language` = 0,`emote` = 0,`comment` = 'majordomo SAY_SUMMON_1' WHERE `script_texts`.`entry` = -1409024;
 +
-
