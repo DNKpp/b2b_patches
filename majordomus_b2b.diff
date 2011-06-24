@@ -404,7 +404,7 @@ new file mode 100644
 +UPDATE `creature_ai_scripts` SET  `action3_type` =  '39', `action3_param1` =  '20', `comment` =  'Flamewaker Elite - Cast Fireball, Set Phase 1 and CallForHelp on Aggro' WHERE  `creature_ai_scripts`.`id` =1166402;
 + -- hot coel (trap)
 +UPDATE `gameobject_template` SET  `type` =  '6', `data2` =  '20' `data3` =  '20532', `data5` =  '1', `data11` =  '11' WHERE  `gameobject_template`.`entry` =177000;
-diff --git a/scripts/eastern_kingdoms/molten_core/scripted_textes.sql b/scripts/eastern_kingdoms/molten_core/scripted_textes.sql
+diff --git a/scripts/eastern_kingdoms/molten_core/textes.sql b/scripts/eastern_kingdoms/molten_core/textes.sql
 new file mode 100644
 --- /dev/null
 +++ b/scripts/eastern_kingdoms/molten_core/textes.sql
