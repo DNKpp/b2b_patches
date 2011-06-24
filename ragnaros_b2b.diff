@@ -1,5 +1,5 @@
 diff --git a/scripts/eastern_kingdoms/molten_core/boss_ragnaros.cpp b/scripts/eastern_kingdoms/molten_core/boss_ragnaros.cpp
-index a3a4faa..c5bda58 100644
+index a3a4faa..474c4f8 100644
 --- a/scripts/eastern_kingdoms/molten_core/boss_ragnaros.cpp
 +++ b/scripts/eastern_kingdoms/molten_core/boss_ragnaros.cpp
 @@ -16,8 +16,8 @@
@@ -68,7 +68,7 @@ index a3a4faa..c5bda58 100644
      uint32 m_uiWrathOfRagnarosTimer;
      uint32 m_uiMagmaBlastTimer;
      uint32 m_uiElementalFireTimer;
-@@ -76,27 +95,121 @@ struct MANGOS_DLL_DECL boss_ragnarosAI : public Scripted_NoMovementAI
+@@ -76,13 +95,22 @@ struct MANGOS_DLL_DECL boss_ragnarosAI : public Scripted_NoMovementAI
      uint32 m_uiAttackTimer;
      uint32 m_uiAddCount;
  
@@ -91,11 +91,8 @@ index a3a4faa..c5bda58 100644
 +        m_uiHammerTimer = 11000;
          m_uiMagmaBlastTimer = 2000;
          m_uiElementalFireTimer = 3000;
--        m_uiSubmergeTimer = 3*MINUTE*IN_MILLISECONDS;
-+        m_uiSubmergeTimer = 0.1*MINUTE*IN_MILLISECONDS;
-         m_uiAttackTimer = 90*IN_MILLISECONDS;
-         m_uiAddCount = 0;
- 
+         m_uiSubmergeTimer = 3*MINUTE*IN_MILLISECONDS;
+@@ -92,11 +120,96 @@ struct MANGOS_DLL_DECL boss_ragnarosAI : public Scripted_NoMovementAI
          m_bHasYelledMagmaBurst = false;
          m_bHasSubmergedOnce = false;
          m_bIsSubmerged = false;
