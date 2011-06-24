@@ -391,6 +391,7 @@ index 7d0d57f..c399248 100644
      pNewScript->GetAI = &GetAI_boss_majordomo;
      pNewScript->RegisterSelf();
  }
+diff --git a/scripts/eastern_kingdoms/molten_core/majordomus.sql b/scripts/eastern_kingdoms/molten_core/majordomus.sql
 new file mode 100644
 --- /dev/null
 +++ b/scripts/eastern_kingdoms/molten_core/majordomus.sql
