@@ -1,5 +1,5 @@
 diff --git a/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.h b/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.h
-index b98841f..3223c45 100644
+index b98841f..8199999 100644
 --- a/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.h
 +++ b/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.h
 @@ -19,6 +19,9 @@ enum
@@ -12,21 +12,7 @@ index b98841f..3223c45 100644
      NPC_VAELASTRASZ             = 13020,
      NPC_LASHLAYER               = 12017,
      NPC_FIREMAW                 = 11983,
-@@ -53,18 +56,21 @@ class MANGOS_DLL_DECL instance_blackwing_lair : public ScriptedInstance
- 
-         void OnCreatureCreate(Creature* pCreature);
-         void OnObjectCreate(GameObject* pGo);
-+        void OnCreatureDeath(Creature* pCreature);
- 
-         void SetData(uint32 uiType, uint32 uiData);
-         uint32 GetData(uint32 uiType);
- 
-         const char* Save() { return m_strInstData.c_str(); }
-         void Load(const char* chrIn);
-+        void SaveData();
- 
-     protected:
-         std::string m_strInstData;
+@@ -65,6 +68,7 @@ class MANGOS_DLL_DECL instance_blackwing_lair : public ScriptedInstance
          uint32 m_auiEncounter[MAX_ENCOUNTER];
  
          GUIDList m_lTechnicianGuids;
@@ -35,7 +21,7 @@ index b98841f..3223c45 100644
  
  #endif
 diff --git a/scripts/eastern_kingdoms/blackwing_lair/boss_razorgore.cpp b/scripts/eastern_kingdoms/blackwing_lair/boss_razorgore.cpp
-index a7b0f74..e5dc9ae 100644
+index a7b0f74..a8ac7c1 100644
 --- a/scripts/eastern_kingdoms/blackwing_lair/boss_razorgore.cpp
 +++ b/scripts/eastern_kingdoms/blackwing_lair/boss_razorgore.cpp
 @@ -16,13 +16,14 @@
@@ -55,7 +41,7 @@ index a7b0f74..e5dc9ae 100644
  
  // Razorgore Phase 2 Script
  enum
-@@ -38,13 +39,418 @@ enum
+@@ -38,13 +39,401 @@ enum
      SPELL_WARSTOMP              = 24375,
      SPELL_FIREBALL_VOLLEY       = 22425,
      SPELL_CONFLAGRATION         = 23023,
@@ -85,8 +71,8 @@ index a7b0f74..e5dc9ae 100644
 +    PHASE_ONE,
 +    PHASE_FIGHT,
 +    PHASE_DONE,
-+};
-+
+ };
+ 
 +struct sSpawnLocation
 +{
 +    float m_fX, m_fY, m_fZ;
@@ -139,8 +125,8 @@ index a7b0f74..e5dc9ae 100644
 +    { -7548.185f, -1041.537f, 407.205f },
 +    { -7563.438f, -1012.763f, 407.205f },
 +    { -7583.950f,  -991.112f, 407.199f }
- };
- 
++};
++
 +const sSpawnLocation aAddCombatStartPosition = { -7554.54f, -1024.50f, 408.49f };
 +
 +/*######
@@ -376,23 +362,6 @@ index a7b0f74..e5dc9ae 100644
 +
 +    void MoveInLineOfSight(Unit* who) {}
 +
-+    void JustDied(Unit *pWho)
-+    {
-+        // ugly hack to prevent razorgore gets killed in phase PHASE_ONE
-+        if (!pWho && m_bIsCharmed == true && m_Phase == PHASE_ONE)
-+        {
-+            if (Creature* pRazorgore = m_pInstance->GetSingleCreatureFromStorage(NPC_RAZORGORE))
-+            {
-+                pRazorgore->MonsterYell(SAY_DEATH, 0);
-+                pRazorgore->CastSpell(m_creature, SPELL_FIREBALL, true);
-+                pRazorgore->Respawn();
-+                m_pInstance->SetData(TYPE_RAZORGORE, FAIL);
-+                if (instance_blackwing_lair *BlackwingLair = (instance_blackwing_lair*)m_pInstance)
-+                    BlackwingLair->SaveData();
-+            }
-+        }
-+    }
-+
 +    void UpdateAI(const uint32 uiDiff)
 +    {
 +        if (!m_pInstance || m_pInstance->GetData(TYPE_RAZORGORE) == DONE)
@@ -474,7 +443,7 @@ index a7b0f74..e5dc9ae 100644
          Reset();
      }
  
-@@ -57,18 +463,24 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
+@@ -57,32 +446,53 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
  
      void Reset()
      {
@@ -485,27 +454,35 @@ index a7b0f74..e5dc9ae 100644
          m_uiFireballVolleyTimer = 7000;
  
      }
--
+ 
 -    void Aggro(Unit* pWho)
-+ 
-+    void DamageTaken(Unit *pWho, uint32 &uiDmg)
-     {
+-    {
 -        // TODO Temporarily add this InstData setting, must be started with Phase 1 which is not yet implemented
 -        if (m_pInstance)
 -            m_pInstance->SetData(TYPE_RAZORGORE, IN_PROGRESS);
-+        if (mob_blackwing_orb_triggerAI *pTriggerAI = (mob_blackwing_orb_triggerAI*)m_pInstance->GetSingleCreatureFromStorage(NPC_ORB_TRIGGER)->AI())
+-    }
+-
+     void JustDied(Unit* pKiller)
+     {
++        // if phase = PHASE_ONE kill all enemy targets and respawn
++        if (Creature* pTrigger = m_pInstance->GetSingleCreatureFromStorage(NPC_ORB_TRIGGER))
 +        {
-+            if (pTriggerAI->m_Phase != PHASE_FIGHT && uiDmg >= m_creature->GetHealth())
++            if (mob_blackwing_orb_triggerAI *pTriggerAI = (mob_blackwing_orb_triggerAI*)pTrigger->AI())
 +            {
-+                uiDmg = 0;
-+                m_creature->MonsterYell(SAY_DEATH, 0);
-+                m_creature->CastSpell(m_creature, SPELL_FIREBALL, true);
++                if (pTriggerAI->m_Phase == PHASE_ONE)
++                {
++                    m_creature->MonsterYell(SAY_DEATH, 0);
++                    m_creature->CastSpell(m_creature, SPELL_FIREBALL, true);
++                    m_creature->Respawn();
++                    pTriggerAI->Reset();
++                    if (m_pInstance)
++                        m_pInstance->SetData(TYPE_RAZORGORE, FAIL);
++                    return;
++                }
 +            }
 +        }
-     }
- 
-     void JustDied(Unit* pKiller)
-@@ -76,13 +488,22 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
++
++        // if killed in phase PHASE_FIGHT, fight ends, and event is done
          if (m_pInstance)
              m_pInstance->SetData(TYPE_RAZORGORE, DONE);
  
@@ -529,7 +506,7 @@ index a7b0f74..e5dc9ae 100644
      }
  
      void UpdateAI(const uint32 uiDiff)
-@@ -90,6 +511,10 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
+@@ -90,6 +500,10 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
          if (!m_creature->SelectHostileTarget() || !m_creature->getVictim())
              return;
  
@@ -540,7 +517,7 @@ index a7b0f74..e5dc9ae 100644
          // Cleave
          if (m_uiCleaveTimer < uiDiff)
          {
-@@ -121,7 +546,7 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
+@@ -121,7 +535,7 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
          if (m_uiConflagrationTimer < uiDiff)
          {
              if (DoCastSpellIfCan(m_creature, SPELL_CONFLAGRATION) == CAST_OK)
@@ -549,7 +526,7 @@ index a7b0f74..e5dc9ae 100644
          }
          else
              m_uiConflagrationTimer -= uiDiff;
-@@ -144,12 +569,188 @@ CreatureAI* GetAI_boss_razorgore(Creature* pCreature)
+@@ -144,12 +558,188 @@ CreatureAI* GetAI_boss_razorgore(Creature* pCreature)
      return new boss_razorgoreAI(pCreature);
  }
  
@@ -559,7 +536,7 @@ index a7b0f74..e5dc9ae 100644
 +######*/
 +
 +enum
-+{
+ {
 +    SPELL_ARCANE_MISSILES       = 22273,
 +    SPELL_SLOW                  = 13747,
 +    SPELL_GREATER_POLYMORPH     = 22274,
@@ -666,7 +643,7 @@ index a7b0f74..e5dc9ae 100644
 +## go_orb_of_domintaion
 +######*/
 +bool GOUse_go_orb_of_domintaion(Player* pPlayer, GameObject* pGo)
- {
++{
 +    if (ScriptedInstance* pInstance = (ScriptedInstance*)pGo->GetInstanceData())
 +    {
 +        Creature *pTrigger = pInstance->GetSingleCreatureFromStorage(NPC_ORB_TRIGGER);
@@ -741,30 +718,10 @@ index a7b0f74..e5dc9ae 100644
 +    pNewScript->RegisterSelf();
 + }
 diff --git a/scripts/eastern_kingdoms/blackwing_lair/instance_blackwing_lair.cpp b/scripts/eastern_kingdoms/blackwing_lair/instance_blackwing_lair.cpp
-index 7493116..c1ced61 100644
+index 7493116..8c0021e 100644
 --- a/scripts/eastern_kingdoms/blackwing_lair/instance_blackwing_lair.cpp
 +++ b/scripts/eastern_kingdoms/blackwing_lair/instance_blackwing_lair.cpp
-@@ -44,6 +44,19 @@ bool instance_blackwing_lair::IsEncounterInProgress() const
-     return false;
- }
- 
-+void instance_blackwing_lair::OnCreatureDeath(Creature* pCreature)
-+{
-+    switch (pCreature->GetEntry())
-+    {
-+        // ugly hack to check if razorgore is charmed. if so, he should not die.
-+        case NPC_RAZORGORE:
-+            if (Creature *pTrigger = (Creature*)GetSingleCreatureFromStorage(NPC_ORB_TRIGGER))
-+                if (pTrigger->AI())
-+                    pTrigger->AI()->JustDied(NULL);
-+            break;
-+    }
-+}
-+
- void instance_blackwing_lair::OnCreatureCreate(Creature* pCreature)
- {
-     switch (pCreature->GetEntry())
-@@ -53,8 +66,14 @@ void instance_blackwing_lair::OnCreatureCreate(Creature* pCreature)
+@@ -53,8 +53,14 @@ void instance_blackwing_lair::OnCreatureCreate(Creature* pCreature)
              if (pCreature->IsWithinDist2d(aNefariusSpawnLoc[0], aNefariusSpawnLoc[1], 50.0f))
                  m_lTechnicianGuids.push_back(pCreature->GetObjectGuid());
              break;
@@ -780,7 +737,7 @@ index 7493116..c1ced61 100644
              break;
      }
  }
-@@ -97,10 +116,25 @@ void instance_blackwing_lair::SetData(uint32 uiType, uint32 uiData)
+@@ -97,10 +103,25 @@ void instance_blackwing_lair::SetData(uint32 uiType, uint32 uiData)
      switch(uiType)
      {
          case TYPE_RAZORGORE:
@@ -808,30 +765,7 @@ index 7493116..c1ced61 100644
              break;
          case TYPE_VAELASTRASZ:
              m_auiEncounter[uiType] = uiData;
-@@ -133,8 +167,12 @@ void instance_blackwing_lair::SetData(uint32 uiType, uint32 uiData)
-     }
- 
-     if (uiData == DONE)
--    {
--        OUT_SAVE_INST_DATA;
-+        SaveData();
-+}
-+
-+void instance_blackwing_lair::SaveData()
-+{
-+    OUT_SAVE_INST_DATA;
- 
-         std::ostringstream saveStream;
-         saveStream << m_auiEncounter[0] << " " << m_auiEncounter[1] << " " << m_auiEncounter[2] << " "
-@@ -145,7 +183,6 @@ void instance_blackwing_lair::SetData(uint32 uiType, uint32 uiData)
- 
-         SaveToDB();
-         OUT_SAVE_INST_DATA_COMPLETE;
--    }
- }
- 
- void instance_blackwing_lair::Load(const char* chrIn)
-@@ -164,7 +201,7 @@ void instance_blackwing_lair::Load(const char* chrIn)
+@@ -164,7 +185,7 @@ void instance_blackwing_lair::Load(const char* chrIn)
  
      for(uint8 i = 0; i < MAX_ENCOUNTER; ++i)
      {
@@ -839,7 +773,6 @@ index 7493116..c1ced61 100644
 +        if (m_auiEncounter[i] == IN_PROGRESS || m_auiEncounter[i] == FAIL)
              m_auiEncounter[i] = NOT_STARTED;
      }
- 
 
 diff --git a/scripts/eastern_kingdoms/molten_core/ragnaros.sql b/scripts/eastern_kingdoms/molten_core/ragnaros.sql
 new file mode 100644
