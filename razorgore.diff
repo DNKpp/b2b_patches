@@ -21,7 +21,7 @@ index b98841f..8199999 100644
  
  #endif
 diff --git a/scripts/eastern_kingdoms/blackwing_lair/boss_razorgore.cpp b/scripts/eastern_kingdoms/blackwing_lair/boss_razorgore.cpp
-index a7b0f74..a8ac7c1 100644
+index a7b0f74..97260bc 100644
 --- a/scripts/eastern_kingdoms/blackwing_lair/boss_razorgore.cpp
 +++ b/scripts/eastern_kingdoms/blackwing_lair/boss_razorgore.cpp
 @@ -16,13 +16,14 @@
@@ -41,7 +41,7 @@ index a7b0f74..a8ac7c1 100644
  
  // Razorgore Phase 2 Script
  enum
-@@ -38,13 +39,401 @@ enum
+@@ -38,13 +39,403 @@ enum
      SPELL_WARSTOMP              = 24375,
      SPELL_FIREBALL_VOLLEY       = 22425,
      SPELL_CONFLAGRATION         = 23023,
@@ -248,7 +248,7 @@ index a7b0f74..a8ac7c1 100644
 +        {
 +            if (Creature *pCreature = m_creature->GetMap()->GetCreature(*itr))
 +            {
-+                if (pCreature->GetDistance(aAddCombatStartPosition.m_fX, aAddCombatStartPosition.m_fY, aAddCombatStartPosition.m_fZ) < 3)
++                if (pCreature->GetDistance(aAddCombatStartPosition.m_fX, aAddCombatStartPosition.m_fY, aAddCombatStartPosition.m_fZ) < 5)
 +                    pCreature->RemoveFromWorld();
 +            }
 +        }
@@ -257,7 +257,7 @@ index a7b0f74..a8ac7c1 100644
 +        {
 +            if (Creature *pCreature = m_creature->GetMap()->GetCreature(*itr))
 +            {
-+                if (pCreature->GetDistance(aAddCombatStartPosition.m_fX, aAddCombatStartPosition.m_fY, aAddCombatStartPosition.m_fZ) < 3)
++                if (pCreature->GetDistance(aAddCombatStartPosition.m_fX, aAddCombatStartPosition.m_fY, aAddCombatStartPosition.m_fZ) < 5)
 +                    pCreature->RemoveFromWorld();
 +            }
 +        }
@@ -319,13 +319,13 @@ index a7b0f74..a8ac7c1 100644
 +        for (std::list<ObjectGuid>::iterator itr = m_uiDragonkinGUIDs.begin(); itr != m_uiDragonkinGUIDs.end(); ++itr)
 +        {
 +            if (Creature *pCreature = m_creature->GetMap()->GetCreature(*itr))
-+                m_creature->ForcedDespawn();
++                m_creature->RemoveFromWorld();
 +        }
 +
 +        for (std::list<ObjectGuid>::iterator itr = m_uiOrkGUIDs.begin(); itr != m_uiOrkGUIDs.end(); ++itr)
 +        {
 +            if (Creature *pCreature = m_creature->GetMap()->GetCreature(*itr))
-+                m_creature->ForcedDespawn();
++                m_creature->RemoveFromWorld();
 +        }
 +        m_uiDragonkinGUIDs.clear();
 +        m_uiOrkGUIDs.clear();
@@ -414,6 +414,8 @@ index a7b0f74..a8ac7c1 100644
 +                            m_uiOrkGUIDs.push_back(pCreature->GetObjectGuid());
 +                    }
 +                }
++                if (pCreature)
++                    pCreature->GetMotionMaster()->MoveIdle();
 +            }
 +            m_uiAddSummonTimer = 15000;
 +        }
@@ -443,7 +445,7 @@ index a7b0f74..a8ac7c1 100644
          Reset();
      }
  
-@@ -57,32 +446,53 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
+@@ -57,32 +448,53 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
  
      void Reset()
      {
@@ -469,7 +471,7 @@ index a7b0f74..a8ac7c1 100644
 +        {
 +            if (mob_blackwing_orb_triggerAI *pTriggerAI = (mob_blackwing_orb_triggerAI*)pTrigger->AI())
 +            {
-+                if (pTriggerAI->m_Phase == PHASE_ONE)
++                if (pTriggerAI->m_Phase != PHASE_FIGHT)
 +                {
 +                    m_creature->MonsterYell(SAY_DEATH, 0);
 +                    m_creature->CastSpell(m_creature, SPELL_FIREBALL, true);
@@ -506,7 +508,7 @@ index a7b0f74..a8ac7c1 100644
      }
  
      void UpdateAI(const uint32 uiDiff)
-@@ -90,6 +500,10 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
+@@ -90,6 +502,10 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
          if (!m_creature->SelectHostileTarget() || !m_creature->getVictim())
              return;
  
@@ -517,7 +519,7 @@ index a7b0f74..a8ac7c1 100644
          // Cleave
          if (m_uiCleaveTimer < uiDiff)
          {
-@@ -121,7 +535,7 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
+@@ -121,7 +537,7 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
          if (m_uiConflagrationTimer < uiDiff)
          {
              if (DoCastSpellIfCan(m_creature, SPELL_CONFLAGRATION) == CAST_OK)
@@ -526,7 +528,7 @@ index a7b0f74..a8ac7c1 100644
          }
          else
              m_uiConflagrationTimer -= uiDiff;
-@@ -144,12 +558,188 @@ CreatureAI* GetAI_boss_razorgore(Creature* pCreature)
+@@ -144,12 +560,188 @@ CreatureAI* GetAI_boss_razorgore(Creature* pCreature)
      return new boss_razorgoreAI(pCreature);
  }
  
@@ -774,10 +776,10 @@ index 7493116..8c0021e 100644
              m_auiEncounter[i] = NOT_STARTED;
      }
 
-diff --git a/scripts/eastern_kingdoms/molten_core/ragnaros.sql b/scripts/eastern_kingdoms/molten_core/ragnaros.sql
+diff --git a/scripts/eastern_kingdoms/blackwing_lair/razorgore.sql b/scripts/eastern_kingdoms/blackwing_lair/razorgore.sql
 new file mode 100644
 --- /dev/null
-+++ b/scripts/eastern_kingdoms/molten_core/razorgore.sql
++++ b/scripts/eastern_kingdoms/blackwing_lair/razorgore.sql
 @@ -0,0 +1,46 @@
 + -- Orb of Domination Template
 +UPDATE `gameobject_template` SET  `data10` =  '0', `size` =  '2', `ScriptName` =  'go_orb_of_domintaion' WHERE  `gameobject_template`.`entry` =177808;
