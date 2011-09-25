@@ -21,7 +21,7 @@ index b98841f..8199999 100644
  
  #endif
 diff --git a/scripts/eastern_kingdoms/blackwing_lair/boss_razorgore.cpp b/scripts/eastern_kingdoms/blackwing_lair/boss_razorgore.cpp
-index a7b0f74..97260bc 100644
+index a7b0f74..a0f5ed5 100644
 --- a/scripts/eastern_kingdoms/blackwing_lair/boss_razorgore.cpp
 +++ b/scripts/eastern_kingdoms/blackwing_lair/boss_razorgore.cpp
 @@ -16,13 +16,14 @@
@@ -196,7 +196,7 @@ index a7b0f74..97260bc 100644
 +            if (Creature *pRazorgore = m_pInstance->GetSingleCreatureFromStorage(NPC_RAZORGORE))
 +                pRazorgore->MonsterYell(SAY_EGGS_BROKEN_3, 0);
 +        }
-+        else if (m_uiEggCounter >= 3)
++        else if (m_uiEggCounter >= MAX_EGGS)
 +        {
 +            m_Phase = PHASE_FIGHT;
 +            if (Creature *pRazorgore = m_pInstance->GetSingleCreatureFromStorage(NPC_RAZORGORE))
@@ -775,6 +775,8 @@ index 7493116..8c0021e 100644
 +        if (m_auiEncounter[i] == IN_PROGRESS || m_auiEncounter[i] == FAIL)
              m_auiEncounter[i] = NOT_STARTED;
      }
+ 
+
 
 diff --git a/scripts/eastern_kingdoms/blackwing_lair/razorgore.sql b/scripts/eastern_kingdoms/blackwing_lair/razorgore.sql
 new file mode 100644
