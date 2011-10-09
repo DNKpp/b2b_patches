@@ -1,27 +1,5 @@
-diff --git a/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.h b/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.h
-index b98841f..8199999 100644
---- a/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.h
-+++ b/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.h
-@@ -19,6 +19,9 @@ enum
-     TYPE_NEFARIAN               = 7,
- 
-     NPC_RAZORGORE               = 12435,
-+    NPC_GRETHOK                 = 12557,
-+    NPC_BLACKWING_GUARDSMAN     = 14456,
-+    NPC_ORB_TRIGGER             = 14449,
-     NPC_VAELASTRASZ             = 13020,
-     NPC_LASHLAYER               = 12017,
-     NPC_FIREMAW                 = 11983,
-@@ -65,6 +68,7 @@ class MANGOS_DLL_DECL instance_blackwing_lair : public ScriptedInstance
-         uint32 m_auiEncounter[MAX_ENCOUNTER];
- 
-         GUIDList m_lTechnicianGuids;
-+        GUIDList m_lGuardsmanGuids;
- };
- 
- #endif
 diff --git a/scripts/eastern_kingdoms/blackwing_lair/boss_razorgore.cpp b/scripts/eastern_kingdoms/blackwing_lair/boss_razorgore.cpp
-index a7b0f74..a0f5ed5 100644
+index a7b0f74..7af6b51 100644
 --- a/scripts/eastern_kingdoms/blackwing_lair/boss_razorgore.cpp
 +++ b/scripts/eastern_kingdoms/blackwing_lair/boss_razorgore.cpp
 @@ -16,13 +16,14 @@
@@ -41,7 +19,7 @@ index a7b0f74..a0f5ed5 100644
  
  // Razorgore Phase 2 Script
  enum
-@@ -38,13 +39,403 @@ enum
+@@ -38,13 +39,410 @@ enum
      SPELL_WARSTOMP              = 24375,
      SPELL_FIREBALL_VOLLEY       = 22425,
      SPELL_CONFLAGRATION         = 23023,
@@ -60,6 +38,7 @@ index a7b0f74..a0f5ed5 100644
 +    NPC_DEATH_TALON_DRAGONSPAWN = 12422,            // dragonkin
 +    NPC_BLACKWING_LEGIONNAIRE   = 12416,            // orc
 +    NPC_BLACKWING_MAGE          = 12420,            // orc
++    GO_DRAGON_EGG               = 177807,
 +};
 +
 +#define SAY_PHASE_FIGHT "I'm free! That device shall never torment me again!"
@@ -141,7 +120,6 @@ index a7b0f74..a0f5ed5 100644
 +            m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NOT_SELECTABLE);
 +        if (!m_creature->HasFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE))
 +            m_creature->SetFlag(UNIT_FIELD_FLAGS, UNIT_FLAG_NON_ATTACKABLE);
-+        Reset();
 +
 +        if (m_pInstance && m_pInstance->GetData(TYPE_RAZORGORE) != DONE)
 +        {
@@ -266,7 +244,6 @@ index a7b0f74..a0f5ed5 100644
 +    void AttackNearestTarget(Creature* pCreature)
 +    {
 +        float minRange = VISIBLE_RANGE;
-+        float range;
 +        Player* target = NULL;
 +
 +        Map::PlayerList const& players = m_creature->GetMap()->GetPlayers();
@@ -276,7 +253,7 @@ index a7b0f74..a0f5ed5 100644
 +            {
 +                if (i_pl->isTargetableForAttack())
 +                {
-+                    range = i_pl->GetDistance(pCreature);
++                    float range = i_pl->GetDistance(pCreature);
 +                    if (range < minRange)
 +                    {
 +                        minRange = range;
@@ -308,7 +285,7 @@ index a7b0f74..a0f5ed5 100644
 +        {
 +            GameObject *pGo = m_creature->GetMap()->GetGameObject(*itr);
 +            if (!pGo)
-+                *itr = m_creature->SummonGameObject(177807, aEggSpawnLocs[i].m_fX, aEggSpawnLocs[i].m_fY, aEggSpawnLocs[i].m_fZ, urand(0, M_PI_F * 2), TEMPSUMMON_MANUAL_DESPAWN)->GetObjectGuid();
++                *itr = m_creature->SummonGameObject(GO_DRAGON_EGG, aEggSpawnLocs[i].m_fX, aEggSpawnLocs[i].m_fY, aEggSpawnLocs[i].m_fZ, urand(0, M_PI_F * 2), TEMPSUMMON_MANUAL_DESPAWN)->GetObjectGuid();
 +            i++;
 +        }
 +    }
@@ -333,10 +310,16 @@ index a7b0f74..a0f5ed5 100644
 +
 +    void SummonedCreatureDespawn(Creature *pCreature)
 +    {
-+        if (pCreature->GetEntry() == NPC_DEATH_TALON_DRAGONSPAWN)
++        switch(pCreature->GetEntry())
++        {
++        case NPC_DEATH_TALON_DRAGONSPAWN:
 +            m_uiDragonkinGUIDs.remove(pCreature->GetObjectGuid());
-+        else if (pCreature->GetEntry() == NPC_BLACKWING_LEGIONNAIRE || pCreature->GetEntry() == NPC_BLACKWING_MAGE)
++            break;
++        case NPC_BLACKWING_LEGIONNAIRE:
++        case NPC_BLACKWING_MAGE:
 +            m_uiOrkGUIDs.remove(pCreature->GetObjectGuid());
++            break;
++        }            
 +    }
 +
 +    void JustExceededSpawnDelay(Creature *pCreature)
@@ -375,11 +358,13 @@ index a7b0f74..a0f5ed5 100644
 +        if (!pRazorgore->HasAura(SPELL_POSSES) && m_Phase != PHASE_FIGHT && m_Phase != PHASE_DONE)
 +            m_creature->CastSpell(pRazorgore, SPELL_POSSES, true);
 +
-+        if (m_Phase == PHASE_NONE || m_Phase == PHASE_DONE)
-+            return;
-+        // no adds spawn during fight phase
-+        else if (m_Phase == PHASE_FIGHT)
++        switch(m_Phase)
 +        {
++        case PHASE_NONE:
++        case PHASE_DONE:
++            return;
++        // no add spawn during fight phase
++        case PHASE_FIGHT:
 +            // if GUID lists are empty, return;
 +            if (m_uiDragonkinGUIDs.empty() && m_uiOrkGUIDs.empty())
 +                return;
@@ -445,7 +430,7 @@ index a7b0f74..a0f5ed5 100644
          Reset();
      }
  
-@@ -57,32 +448,53 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
+@@ -57,32 +455,53 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
  
      void Reset()
      {
@@ -508,7 +493,7 @@ index a7b0f74..a0f5ed5 100644
      }
  
      void UpdateAI(const uint32 uiDiff)
-@@ -90,6 +502,10 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
+@@ -90,6 +509,10 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
          if (!m_creature->SelectHostileTarget() || !m_creature->getVictim())
              return;
  
@@ -519,7 +504,7 @@ index a7b0f74..a0f5ed5 100644
          // Cleave
          if (m_uiCleaveTimer < uiDiff)
          {
-@@ -121,7 +537,7 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
+@@ -121,7 +544,7 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
          if (m_uiConflagrationTimer < uiDiff)
          {
              if (DoCastSpellIfCan(m_creature, SPELL_CONFLAGRATION) == CAST_OK)
@@ -528,7 +513,7 @@ index a7b0f74..a0f5ed5 100644
          }
          else
              m_uiConflagrationTimer -= uiDiff;
-@@ -144,12 +560,188 @@ CreatureAI* GetAI_boss_razorgore(Creature* pCreature)
+@@ -144,12 +567,187 @@ CreatureAI* GetAI_boss_razorgore(Creature* pCreature)
      return new boss_razorgoreAI(pCreature);
  }
  
@@ -558,14 +543,14 @@ index a7b0f74..a0f5ed5 100644
 +    // timer
 +    uint32 m_uiArcaneMissilesTimer;
 +    uint32 m_uiSlowTimer;
-+    uint32 m_uiGreaterPolymprphTimer;
++    uint32 m_uiGreaterPolymorphTimer;
 +    uint32 m_uiDominateMindTimer;
 +
 +    void Reset()
 +    {
 +        m_uiArcaneMissilesTimer     = 0;
 +        m_uiSlowTimer               = urand(15000, 21000);
-+        m_uiGreaterPolymprphTimer   = urand(8000, 11000);
++        m_uiGreaterPolymorphTimer   = urand(8000, 11000);
 +        m_uiDominateMindTimer       = urand(11000, 14000);
 +    }
 +
@@ -606,31 +591,31 @@ index a7b0f74..a0f5ed5 100644
 +            m_uiArcaneMissilesTimer -= uiDiff;
 +
 +        // cast Slow
-+        if (m_uiArcaneMissilesTimer < uiDiff)
++        if (m_uiSlowTimer < uiDiff)
 +        {
 +            if (DoCastSpellIfCan(m_creature->getVictim(), SPELL_SLOW) == CAST_OK)
-+                m_uiArcaneMissilesTimer = urand(10000, 17000);
++                m_uiSlowTimer = urand(10000, 17000);
 +        }
 +        else
-+            m_uiArcaneMissilesTimer -= uiDiff;
++            m_uiSlowTimer -= uiDiff;
 +
 +        // cast Greater Polymorph
-+        if (m_uiArcaneMissilesTimer < uiDiff)
++        if (m_uiGreaterPolymorphTimer < uiDiff)
 +        {
 +            if (DoCastSpellIfCan(m_creature->getVictim(), SPELL_GREATER_POLYMORPH) == CAST_OK)
-+                m_uiArcaneMissilesTimer = urand(20000, 24000);
++                m_uiGreaterPolymorphTimer = urand(20000, 24000);
 +        }
 +        else
-+            m_uiArcaneMissilesTimer -= uiDiff;
++            m_uiGreaterPolymorphTimer -= uiDiff;
 +
 +        // cast Dominate Mind
-+        if (m_uiArcaneMissilesTimer < uiDiff)
++        if (m_uiDominateMindTimer < uiDiff)
 +        {
 +            if (DoCastSpellIfCan(m_creature->getVictim(), SPELL_DOMINATE_MIND) == CAST_OK)
-+                m_uiArcaneMissilesTimer = urand(16000, 20000);
++                m_uiDominateMindTimer = urand(16000, 20000);
 +        }
 +        else
-+            m_uiArcaneMissilesTimer -= uiDiff;
++            m_uiDominateMindTimer -= uiDiff;
 +
 +        DoMeleeAttackIfReady();
 +    }
@@ -662,7 +647,7 @@ index a7b0f74..a0f5ed5 100644
 +        pTriggerAI->m_bIsCharmed = true;
 +        pPlayer->CastSpell(pCreature, SPELL_DRAGON_ORB, true);
 +    }
-+   else
++    else
 +        return true;
 +
 +    return false;
@@ -673,7 +658,7 @@ index a7b0f74..a0f5ed5 100644
 +######*/
 +bool GOUse_go_dark_dragon_egg(Player* pPlayer, GameObject* pGo)
 +{
-+   if (ScriptedInstance* pInstance = (ScriptedInstance*)pGo->GetInstanceData())
++    if (ScriptedInstance* pInstance = (ScriptedInstance*)pGo->GetInstanceData())
 +    {
 +        Creature *pTrigger = pInstance->GetSingleCreatureFromStorage(NPC_ORB_TRIGGER);
 +        if (!pTrigger)
@@ -682,8 +667,7 @@ index a7b0f74..a0f5ed5 100644
 +        if (mob_blackwing_orb_triggerAI *pTriggerAI = (mob_blackwing_orb_triggerAI*)pTrigger->AI())
 +            pTriggerAI->DestroyEgg();
 +
-+        TemporarySummonGO *pTemp = (TemporarySummonGO*)pGo;
-+        if (pTemp)
++        if (TemporarySummonGO *pTemp = (TemporarySummonGO*)pGo)
 +            pTemp->UnSummon();
 +    }
 +    return false;
@@ -719,70 +703,12 @@ index a7b0f74..a0f5ed5 100644
 +    pNewScript->pGOUse = &GOUse_go_dark_dragon_egg;
 +    pNewScript->RegisterSelf();
 + }
-diff --git a/scripts/eastern_kingdoms/blackwing_lair/instance_blackwing_lair.cpp b/scripts/eastern_kingdoms/blackwing_lair/instance_blackwing_lair.cpp
-index 7493116..8c0021e 100644
---- a/scripts/eastern_kingdoms/blackwing_lair/instance_blackwing_lair.cpp
-+++ b/scripts/eastern_kingdoms/blackwing_lair/instance_blackwing_lair.cpp
-@@ -53,8 +53,14 @@ void instance_blackwing_lair::OnCreatureCreate(Creature* pCreature)
-             if (pCreature->IsWithinDist2d(aNefariusSpawnLoc[0], aNefariusSpawnLoc[1], 50.0f))
-                 m_lTechnicianGuids.push_back(pCreature->GetObjectGuid());
-             break;
-+        case NPC_BLACKWING_GUARDSMAN:
-+            m_lGuardsmanGuids.push_back(pCreature->GetObjectGuid());
-+            break;
-         case NPC_VAELASTRASZ:
--            m_mNpcEntryGuidStore[NPC_VAELASTRASZ] = pCreature->GetObjectGuid();
-+        case NPC_RAZORGORE:
-+        case NPC_GRETHOK:
-+        case NPC_ORB_TRIGGER:
-+            m_mNpcEntryGuidStore[pCreature->GetEntry()] = pCreature->GetObjectGuid();
-             break;
-     }
- }
-@@ -97,10 +103,25 @@ void instance_blackwing_lair::SetData(uint32 uiType, uint32 uiData)
-     switch(uiType)
-     {
-         case TYPE_RAZORGORE:
--            m_auiEncounter[uiType] = uiData;
--            DoUseDoorOrButton(GO_DOOR_RAZORGORE_ENTER);
-             if (uiData == DONE)
-                 DoUseDoorOrButton(GO_DOOR_RAZORGORE_EXIT);
-+            else if (uiData == FAIL)
-+            {
-+                // Respawn Grethok
-+                if (Creature *pGrethok = GetSingleCreatureFromStorage(NPC_GRETHOK))
-+                    if (pGrethok->isDead())
-+                        pGrethok->Respawn();
-+
-+                // Respawn adds of Grethok
-+                for (GUIDList::const_iterator itr = m_lGuardsmanGuids.begin(); itr != m_lGuardsmanGuids.end(); ++itr)
-+                {
-+                    if (Creature *pCreature = instance->GetCreature(*itr))
-+                        if (pCreature->isDead())
-+                            pCreature->Respawn();
-+                }
-+            }
-+            m_auiEncounter[uiType] = uiData;
-+            DoUseDoorOrButton(GO_DOOR_RAZORGORE_ENTER);
-             break;
-         case TYPE_VAELASTRASZ:
-             m_auiEncounter[uiType] = uiData;
-@@ -164,7 +185,7 @@ void instance_blackwing_lair::Load(const char* chrIn)
- 
-     for(uint8 i = 0; i < MAX_ENCOUNTER; ++i)
-     {
--        if (m_auiEncounter[i] == IN_PROGRESS)
-+        if (m_auiEncounter[i] == IN_PROGRESS || m_auiEncounter[i] == FAIL)
-             m_auiEncounter[i] = NOT_STARTED;
-     }
- 
-
 
 diff --git a/scripts/eastern_kingdoms/blackwing_lair/razorgore.sql b/scripts/eastern_kingdoms/blackwing_lair/razorgore.sql
 new file mode 100644
 --- /dev/null
 +++ b/scripts/eastern_kingdoms/blackwing_lair/razorgore.sql
-@@ -0,0 +1,46 @@
+@@ -0,0 +1,22 @@
 + -- Orb of Domination Template
 +UPDATE `gameobject_template` SET  `data10` =  '0', `size` =  '2', `ScriptName` =  'go_orb_of_domintaion' WHERE  `gameobject_template`.`entry` =177808;
 +
@@ -799,34 +725,10 @@ new file mode 100644
 +UPDATE `instance_template` SET  `ScriptName` =  'instance_blackwing_lair' WHERE  `instance_template`.`map` =469;
 +
 + -- blackwing orb trigger
-+UPDATE `creature_template` SET  `ScriptName` =  'mob_blackwing_orb_trigger' WHERE  `creature_template`.`entry` =14449;
++UPDATE `creature_template` SET  `flags_extra` = '128', `ScriptName` =  'mob_blackwing_orb_trigger' WHERE  `creature_template`.`entry` =14449;
 +INSERT INTO `creature` (`id`, `map`, `spawnMask`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `DeathState`, `MovementType`) VALUES (14449, 469, 1, 0, 0, -7617.23, -1022.97, 413.382, 5.37357, 25, 5, 0, 64, 0, 0, 0);
 +
 +
 + -- MC & Possesss & Destroy Eggs
 +INSERT INTO `spell_script_target` (`entry` ,`type` ,`targetEntry`)VALUES ('23014', '1', '12435'), ('19832', '1', '12435'), ('19873', '0', '177807');
 +
-+ -- Doors:
-+ -- razorgore doors template
-+UPDATE `gameobject_template` SET  `flags` =  '4', `size` =  '2' WHERE  `gameobject_template`.`entry` =176964;
-+UPDATE `gameobject_template` SET  `flags` =  '4', `size` =  '2' WHERE  `gameobject_template`.`entry` =176965;
-+
-+ -- Vaelastrasz Door
-+UPDATE `gameobject_template` SET  `flags` =  '4', `size` =  '4' WHERE  `gameobject_template`.`entry` =179364;
-+
-+ -- Lashlayer Door
-+UPDATE `gameobject_template` SET  `flags` =  '4', `size` =  '4' WHERE  `gameobject_template`.`entry` =179365;
-+
-+ -- Chromaggus Doors:
-+ -- Chromaggus Gate
-+UPDATE `gameobject_template` SET  `size` =  '4' WHERE  `gameobject_template`.`entry` =179115;
-+
-+ -- Side-Gate
-+UPDATE `gameobject_template` SET  `flags` =  '4', `size` =  '4' WHERE  `gameobject_template`.`entry` =179116;
-+
-+ -- Gate to Nefarian
-+UPDATE `gameobject_template` SET  `flags` =  '4', `size` =  '2' WHERE  `gameobject_template`.`entry` =179117;
-+
-+ -- Set respawn to 7 days
-+UPDATE `creature` SET  `spawntimesecs` =  '36288000' WHERE  `creature`.`map` =469;
-

@@ -1,5 +1,5 @@
 diff --git a/scripts/kalimdor/onyxias_lair/boss_onyxia.cpp b/scripts/kalimdor/onyxias_lair/boss_onyxia.cpp
-index 2e9f0e1..16aaf97 100644
+index 2e9f0e1..3083f5d 100644
 --- a/scripts/kalimdor/onyxias_lair/boss_onyxia.cpp
 +++ b/scripts/kalimdor/onyxias_lair/boss_onyxia.cpp
 @@ -36,13 +36,15 @@ enum
@@ -60,9 +60,9 @@ index 2e9f0e1..16aaf97 100644
  
      bool m_bIsSummoningWhelps;
  
-+    // store lavacrack guids rnd
-+    std::map<uint32, ObjectGuid> m_Crackmap;
-+    uint32 m_uiCrackIndex;
++    // store lavacrack guids
++    GUIDList m_CrackList;
++    bool m_bDoErruption;
 +
      void Reset()
      {
@@ -71,7 +71,7 @@ index 2e9f0e1..16aaf97 100644
          m_uiFireballTimer = 15000;
          m_uiSummonWhelpsTimer = 15000;
          m_uiBellowingRoarTimer = 2000;                      // Immediately after landing
-+        m_uiErruptionTimer = 99999999;                      // get real time from SPELL_BELLOWINGROAR block
++        m_uiErruptionTimer = 1000;                          // Immediately after Bellowing Roar
          m_uiWhelpTimer = 1000;
 -        m_uiSummonGuardTimer = 15000;
 +        //m_uiSummonGuardTimer = 15000;
@@ -80,18 +80,17 @@ index 2e9f0e1..16aaf97 100644
  
          m_bIsSummoningWhelps = false;
 +
-+        m_uiCrackIndex = 0;
++        m_bDoErruption = false;
      }
  
      void Aggro(Unit* pWho)
-@@ -188,6 +202,35 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
+@@ -188,6 +202,34 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
              m_pInstance->SetData(TYPE_ONYXIA, DONE);
      }
  
 +    void AttackNearestTarget(Creature* pCreature)
 +    {
 +        float minRange = VISIBLE_RANGE;
-+        float range;
 +        Player* target = NULL;
 +
 +        Map::PlayerList const& players = m_creature->GetMap()->GetPlayers();
@@ -101,7 +100,7 @@ index 2e9f0e1..16aaf97 100644
 +            {
 +                if (i_pl->isTargetableForAttack())
 +                {
-+                    range = i_pl->GetDistance(pCreature);
++                    float range = i_pl->GetDistance(pCreature);
 +                    if (range < minRange)
 +                    {
 +                        minRange = range;
@@ -120,7 +119,7 @@ index 2e9f0e1..16aaf97 100644
      void JustSummoned(Creature* pSummoned)
      {
          if (!m_pInstance)
-@@ -207,6 +250,12 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
+@@ -207,6 +249,12 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
              ++m_uiSummonCount;
      }
  
@@ -133,7 +132,7 @@ index 2e9f0e1..16aaf97 100644
      void SummonedMovementInform(Creature* pSummoned, uint32 uiMoveType, uint32 uiPointId)
      {
          if (uiMoveType != POINT_MOTION_TYPE || uiPointId != 1 || !m_creature->getVictim())
-@@ -260,21 +309,105 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
+@@ -260,21 +308,97 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
          }
      }
  
@@ -141,34 +140,25 @@ index 2e9f0e1..16aaf97 100644
 +    {
 +        if (m_pInstance)
 +        {
-+            // get lavacracks and sort rnd
-+            if (m_Crackmap.empty())
++            // get and store lavacracks
++            if (m_CrackList.empty())
 +            {
-+                GUIDList LavacrackGUIDs = m_pInstance->GetLavacrackList();
-+                std::pair<uint32, ObjectGuid> CrackmapPair;
-+                for (GUIDList::const_iterator itr = LavacrackGUIDs.begin(); itr != LavacrackGUIDs.end(); ++itr)
-+                {
-+                    uint32 rnd = urand(1, 999999);
-+                    while(m_Crackmap.find(rnd) != m_Crackmap.end())
-+                        rnd++;
-+
-+                    CrackmapPair = std::make_pair(rnd, *itr);
-+                    m_Crackmap.insert(CrackmapPair);
-+                }
++                m_CrackList = m_pInstance->GetLavacrackList();
 +                return;
 +            }
 +            // iterate lavacracks, summon trigger and cast spell
 +            else
 +            {
-+                uint8 i = 0;
-+                std::map<uint32, ObjectGuid>::const_iterator itr = NULL;
-+                if (!m_uiCrackIndex)
-+                    itr = m_Crackmap.begin();
-+                else
-+                    itr = m_Crackmap.find(m_uiCrackIndex);
-+                for (; itr != m_Crackmap.end(); ++itr)
++                for (uint8 i = 0; i < 5 ; i++)
 +                {
-+                    WorldObject *Caster = m_creature->GetMap()->GetWorldObject(itr->second);
++                    GUIDList::const_iterator itr = m_CrackList.begin();
++                    for (uint32 rndCount = urand(0, m_CrackList.size() - 1); itr != m_CrackList.end() && rndCount > 0; ++itr)
++                        rndCount--;
++
++                    if (itr == m_CrackList.end())
++                        break;
++
++                    WorldObject *Caster = m_creature->GetMap()->GetWorldObject(*itr);
 +                    if (Caster)
 +                    {
 +                        Creature *pCreature = m_creature->SummonCreature(NPC_ONYXIA_LAVACRACK_DUMMY, Caster->GetPositionX(), Caster->GetPositionY(), Caster->GetPositionZ(), Caster->GetOrientation(), TEMPSUMMON_TIMED_DESPAWN, 100);
@@ -176,23 +166,19 @@ index 2e9f0e1..16aaf97 100644
 +                            pCreature->CastSpell(pCreature, SPELL_ERRUPTION, true);
 +                        m_creature->SendGameObjectCustomAnim(Caster->GetObjectGuid());
 +                    }
-+                    i++;
-+                    if (i >= 5)
-+                    {
-+                        m_uiErruptionTimer = 250;
-+                        ++itr;
-+                        if (itr != m_Crackmap.end())
-+                            m_uiCrackIndex = itr->first;
-+
-+                        return;
-+                    }
++                    m_CrackList.erase(itr);
 +                }
++                // if there are more cracks in list continue next call
++                if (!m_CrackList.empty())
++                    m_uiErruptionTimer = 250;
++                else
++                {
++                    m_uiErruptionTimer = 1000;
++                    m_bDoErruption = false;
++                }
++                return;
 +            } 
 +        }
-+        // if spell occured, cleare crackmap and set timer to high time.
-+        m_uiCrackIndex = 0;
-+        m_Crackmap.clear();
-+        m_uiErruptionTimer = 99999999;
 +    }
 +
 +    bool CheckPlayerPos()
@@ -225,22 +211,27 @@ index 2e9f0e1..16aaf97 100644
 -                        m_uiBellowingRoarTimer = 30000;
 +                    {
 +                        m_uiBellowingRoarTimer = urand(10000, 35000);
++                        m_bDoErruption = true;
 +                        m_uiErruptionTimer = 1000;
 +                    }
                  }
                  else
                      m_uiBellowingRoarTimer -= uiDiff;
 +
-+                if (m_uiErruptionTimer < uiDiff)
++                if (m_bDoErruption)
 +                {
-+                    LavaCracks();
++                    if (m_uiErruptionTimer < uiDiff)
++                    {
++                        LavaCracks();
++                    }
++                    else
++                        m_uiErruptionTimer -= uiDiff;
 +                }
-+                else
-+                    m_uiErruptionTimer -= uiDiff;
++
                  // no break, phase 3 will use same abilities as in 1
              case PHASE_START:
              {
-@@ -423,16 +556,17 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
+@@ -423,16 +547,17 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
                          m_uiSummonWhelpsTimer -= uiDiff;
                  }
  
@@ -268,7 +259,7 @@ index 2e9f0e1..16aaf97 100644
  
                  break;
              }
-@@ -464,6 +598,7 @@ void AddSC_boss_onyxia()
+@@ -464,6 +589,7 @@ void AddSC_boss_onyxia()
      pNewScript->Name = "boss_onyxia";
      pNewScript->GetAI = &GetAI_boss_onyxia;
      pNewScript->RegisterSelf();
@@ -330,6 +321,7 @@ index 2f493a7..8b34d61 100644
  
  #endif
 
+diff --git a/scripts/kalimdor/onyxias_lair/onyxia.sql b/scripts/kalimdor/onyxias_lair/onyxia.sql
 new file mode 100644
 --- /dev/null
 +++ b/scripts/kalimdor/onyxias_lair/Onyxia.sql
@@ -484,4 +476,4 @@ new file mode 100644
 +INSERT INTO spell_target_position VALUES (21137, 249, -114.281258, -213.866486, -73.851128, 3.142);
 +INSERT INTO spell_target_position VALUES (21138, 249, -123.328560, -213.607910, -71.559921, 3.142);
 +INSERT INTO spell_target_position VALUES (21139, 249, -130.788300, -213.424026, -70.751007, 3.142);
-
++

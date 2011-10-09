@@ -1,5 +1,5 @@
 diff --git a/src/game/SpellEffects.cpp b/src/game/SpellEffects.cpp
-index 3b3498f..8c566ba 100644
+index 3b3498f..3c44099 100644
 --- a/src/game/SpellEffects.cpp
 +++ b/src/game/SpellEffects.cpp
 @@ -795,6 +795,28 @@ void Spell::EffectDummy(SpellEffectIndex eff_idx)
@@ -22,10 +22,10 @@ index 3b3498f..8c566ba 100644
 +                }                
 +                case 19873:                                 // Destroy Egg (Razorgore)
 +                {
-+                    if (!gameObjTarget || !m_caster || !m_caster->isCharmed())
++                    if (!gameObjTarget || !m_caster->isCharmed() || !m_caster->GetCharmer())
 +                        return;
 +
-+                    gameObjTarget->Use(m_caster->GetCharmerOrOwner());
++                    gameObjTarget->Use(m_caster->GetCharmer());
 +                    break;
 +                }
                  case 19411:                                 // Lava Bomb
@@ -45,7 +45,7 @@ index 3b3498f..8c566ba 100644
                  {
                      if (!m_CastItem)
 diff --git a/src/game/SpellMgr.cpp b/src/game/SpellMgr.cpp
-index 31f7ca7..b10b111 100644
+index 31f7ca7..8fe3631 100644
 --- a/src/game/SpellMgr.cpp
 +++ b/src/game/SpellMgr.cpp
 @@ -1828,6 +1828,11 @@ bool SpellMgr::IsNoStackSpellDueToSpell(uint32 spellId_1, uint32 spellId_2) cons
