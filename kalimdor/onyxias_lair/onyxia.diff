@@ -1,5 +1,5 @@
 diff --git a/scripts/kalimdor/onyxias_lair/boss_onyxia.cpp b/scripts/kalimdor/onyxias_lair/boss_onyxia.cpp
-index 2e9f0e1..ed0d54a 100644
+index 2e9f0e1..f2c632c 100644
 --- a/scripts/kalimdor/onyxias_lair/boss_onyxia.cpp
 +++ b/scripts/kalimdor/onyxias_lair/boss_onyxia.cpp
 @@ -36,13 +36,15 @@ enum
@@ -402,24 +402,19 @@ index 2e9f0e1..ed0d54a 100644
  
                  break;
              }
-@@ -441,6 +613,16 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
+@@ -441,6 +613,11 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
  
      void SpellHitTarget(Unit* pTarget, const SpellEntry* pSpell)
      {
 +        // set threat to 0 from targets hit by fireball
-+        float threat = 0;
 +        if (pSpell->Id == SPELL_FIREBALL && m_creature->getVictim())
-+        {
-+            threat = m_creature->getThreatManager().getThreat(m_creature->getVictim());
 +            m_creature->AddThreat(m_creature->getVictim(), -m_creature->getThreatManager().getThreat(m_creature->getVictim()));
-+            threat = m_creature->getThreatManager().getThreat(m_creature->getVictim());
 +            return;
-+        }
 +
          // Check if players are hit by Onyxia's Deep Breath
          if (pTarget->GetTypeId() != TYPEID_PLAYER || !m_pInstance)
              return;
-@@ -464,6 +646,7 @@ void AddSC_boss_onyxia()
+@@ -464,6 +641,7 @@ void AddSC_boss_onyxia()
      pNewScript->Name = "boss_onyxia";
      pNewScript->GetAI = &GetAI_boss_onyxia;
      pNewScript->RegisterSelf();
