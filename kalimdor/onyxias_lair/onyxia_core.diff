@@ -1,0 +1,21 @@
+diff --git a/src/game/SpellEffects.cpp b/src/game/SpellEffects.cpp
+index 3b3498f..bf637a6 100644
+--- a/src/game/SpellEffects.cpp
++++ b/src/game/SpellEffects.cpp
+@@ -4513,6 +4541,16 @@ void Spell::EffectScriptEffect(SpellEffectIndex eff_idx)
+ 
+                     return;
+                 }
++                case 19633:                                 // Knock away
++                {
++                    if (!unitTarget || m_caster->GetTypeId() != TYPEID_UNIT)
++                        return;
++
++                    // reduce threat about 25%
++                    if (Creature *pCreature = (Creature*)m_caster)
++                        pCreature->getThreatManager().modifyThreatPercent(unitTarget, -25);
++                    break;
++                }
+                 case 22539:                                 // Shadow Flame (All script effects, not just end ones to
+                 case 22972:                                 // prevent player from dodging the last triggered spell)
+                 case 22975:

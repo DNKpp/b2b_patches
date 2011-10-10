@@ -1,5 +1,5 @@
 diff --git a/scripts/kalimdor/onyxias_lair/boss_onyxia.cpp b/scripts/kalimdor/onyxias_lair/boss_onyxia.cpp
-index 2e9f0e1..3083f5d 100644
+index 2e9f0e1..ed0d54a 100644
 --- a/scripts/kalimdor/onyxias_lair/boss_onyxia.cpp
 +++ b/scripts/kalimdor/onyxias_lair/boss_onyxia.cpp
 @@ -36,13 +36,15 @@ enum
@@ -47,7 +47,15 @@ index 2e9f0e1..3083f5d 100644
  struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
  {
      boss_onyxiaAI(Creature* pCreature) : ScriptedAI(pCreature)
-@@ -130,13 +136,18 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
+@@ -122,6 +128,7 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
+     uint32 m_uiCleaveTimer;
+     uint32 m_uiTailSweepTimer;
+     uint32 m_uiWingBuffetTimer;
++    uint32 m_uiKnockAwayTimer;
+ 
+     uint32 m_uiMovePoint;
+     uint32 m_uiMovementTimer;
+@@ -130,13 +137,18 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
      uint32 m_uiFireballTimer;
      uint32 m_uiSummonWhelpsTimer;
      uint32 m_uiBellowingRoarTimer;
@@ -67,8 +75,20 @@ index 2e9f0e1..3083f5d 100644
      void Reset()
      {
          if (!IsCombatMovement())
-@@ -156,12 +167,15 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
-         m_uiFireballTimer = 15000;
+@@ -144,6 +156,7 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
+ 
+         m_uiPhase = PHASE_START;
+ 
++        m_uiKnockAwayTimer = MINUTE*IN_MILLISECONDS;
+         m_uiFlameBreathTimer = urand(10000, 20000);
+         m_uiTailSweepTimer = urand(15000, 20000);
+         m_uiCleaveTimer = urand(2000, 5000);
+@@ -153,15 +166,18 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
+         m_uiMovementTimer = 20000;
+         m_pPointData = GetMoveData();
+ 
+-        m_uiFireballTimer = 15000;
++        m_uiFireballTimer = 1000;
          m_uiSummonWhelpsTimer = 15000;
          m_uiBellowingRoarTimer = 2000;                      // Immediately after landing
 +        m_uiErruptionTimer = 1000;                          // Immediately after Bellowing Roar
@@ -84,7 +104,7 @@ index 2e9f0e1..3083f5d 100644
      }
  
      void Aggro(Unit* pWho)
-@@ -188,6 +202,34 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
+@@ -188,6 +204,34 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
              m_pInstance->SetData(TYPE_ONYXIA, DONE);
      }
  
@@ -119,7 +139,7 @@ index 2e9f0e1..3083f5d 100644
      void JustSummoned(Creature* pSummoned)
      {
          if (!m_pInstance)
-@@ -207,6 +249,12 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
+@@ -207,6 +251,12 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
              ++m_uiSummonCount;
      }
  
@@ -132,7 +152,7 @@ index 2e9f0e1..3083f5d 100644
      void SummonedMovementInform(Creature* pSummoned, uint32 uiMoveType, uint32 uiPointId)
      {
          if (uiMoveType != POINT_MOTION_TYPE || uiPointId != 1 || !m_creature->getVictim())
-@@ -260,21 +308,97 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
+@@ -260,24 +310,157 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
          }
      }
  
@@ -193,6 +213,15 @@ index 2e9f0e1..3083f5d 100644
 +        return false;
 +    }
 +
++    // return true if moving
++    bool CheckOnyxiaMovement()
++    {
++        if (1 > m_creature->GetDistance(m_pPointData->fX, m_pPointData->fY, m_pPointData->fZ))
++            return false;
++        else
++            return true;
++    }
++
      void UpdateAI(const uint32 uiDiff)
      {
          if (!m_creature->SelectHostileTarget() || !m_creature->getVictim())
@@ -201,6 +230,38 @@ index 2e9f0e1..3083f5d 100644
 +        // check if player is on the bridge, if so, onyxia casts a breath on the bridge
 +        if (CheckPlayerPos())
 +            DoCastSpellIfCan(m_creature, SPELL_BREATH);
++
++        // summon whelps in phase 2 and 3
++        if (m_bIsSummoningWhelps)
++        {
++            // set max whelps
++            uint32 uiMaxWhelps = 0;
++            if (m_uiPhase == PHASE_END)
++                uiMaxWhelps = urand(4, 10);
++            else
++                uiMaxWhelps = MAX_WHELPS_PER_PACK;
++
++            if (m_uiSummonCount < uiMaxWhelps)
++            {
++                if (m_uiWhelpTimer < uiDiff)
++                {
++                    m_creature->SummonCreature(NPC_ONYXIA_WHELP, afSpawnLocations[0][0], afSpawnLocations[0][1], afSpawnLocations[0][2], 0.0f, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, MINUTE*IN_MILLISECONDS);
++                    m_creature->SummonCreature(NPC_ONYXIA_WHELP, afSpawnLocations[1][0], afSpawnLocations[1][1], afSpawnLocations[1][2], 0.0f, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, MINUTE*IN_MILLISECONDS);
++                    m_uiWhelpTimer = 500;
++                }
++                else
++                    m_uiWhelpTimer -= uiDiff;
++            }
++            else
++            {
++                m_bIsSummoningWhelps = false;
++                m_uiSummonCount = 0;
++                if (m_uiPhase == PHASE_END)
++                    m_uiSummonWhelpsTimer = urand(MINUTE*IN_MILLISECONDS, 2*MINUTE*IN_MILLISECONDS);
++                else
++                    m_uiSummonWhelpsTimer = 80000;
++            }
++        }
 +
          switch (m_uiPhase)
          {
@@ -228,23 +289,105 @@ index 2e9f0e1..3083f5d 100644
 +                        m_uiErruptionTimer -= uiDiff;
 +                }
 +
++                if (!m_bIsSummoningWhelps)
++                {
++                    if (m_uiSummonWhelpsTimer < uiDiff)
++                        m_bIsSummoningWhelps = true;
++                    else
++                        m_uiSummonWhelpsTimer -= uiDiff;
++                }
++
                  // no break, phase 3 will use same abilities as in 1
              case PHASE_START:
              {
-@@ -423,16 +547,17 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
++                if (m_uiKnockAwayTimer < uiDiff)
++                {
++                    if (DoCastSpellIfCan(m_creature->getVictim(), SPELL_KNOCK_AWAY) == CAST_OK)
++                        m_uiKnockAwayTimer = MINUTE*IN_MILLISECONDS;
++                }
++                else
++                    m_uiKnockAwayTimer -= uiDiff;
++
+                 if (m_uiFlameBreathTimer < uiDiff)
+                 {
+                     if (DoCastSpellIfCan(m_creature->getVictim(), m_bIsRegularMode ? SPELL_FLAMEBREATH : SPELL_FLAMEBREATH_H) == CAST_OK)
+@@ -348,6 +531,13 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
+ 
+                     SetCombatMovement(true);
+                     m_creature->GetMotionMaster()->MoveChase(m_creature->getVictim());
++                    // wipe threatlist
++                    const ThreatList TList = m_creature->getThreatManager().getThreatList();
++                    for (ThreatList::const_iterator itr = TList.begin(); itr != TList.end(); ++itr)
++                        (*itr)->setThreat(0);
++
++                    // set new timer for whelps
++                    m_uiSummonWhelpsTimer = urand(MINUTE*IN_MILLISECONDS, 2*MINUTE*IN_MILLISECONDS);
+                     return;
+                 }
+ 
+@@ -384,38 +574,7 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
+                 else
+                     m_uiMovementTimer -= uiDiff;
+ 
+-                if (m_uiFireballTimer < uiDiff)
+-                {
+-                    if (Unit* pTarget = m_creature->SelectAttackingTarget(ATTACKING_TARGET_RANDOM, 0))
+-                    {
+-                        if (DoCastSpellIfCan(pTarget, m_bIsRegularMode ? SPELL_FIREBALL : SPELL_FIREBALL_H) == CAST_OK)
+-                            m_uiFireballTimer = 8000;
+-                    }
+-                }
+-                else
+-                    m_uiFireballTimer -= uiDiff;            //engulfingflames is supposed to be activated by a fireball but haven't come by
+-
+-                if (m_bIsSummoningWhelps)
+-                {
+-                    if (m_uiSummonCount < MAX_WHELPS_PER_PACK)
+-                    {
+-                        if (m_uiWhelpTimer < uiDiff)
+-                        {
+-                            m_creature->SummonCreature(NPC_ONYXIA_WHELP, afSpawnLocations[0][0], afSpawnLocations[0][1], afSpawnLocations[0][2], 0.0f, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, MINUTE*IN_MILLISECONDS);
+-                            m_creature->SummonCreature(NPC_ONYXIA_WHELP, afSpawnLocations[1][0], afSpawnLocations[1][1], afSpawnLocations[1][2], 0.0f, TEMPSUMMON_TIMED_OR_DEAD_DESPAWN, MINUTE*IN_MILLISECONDS);
+-                            m_uiWhelpTimer = 500;
+-                        }
+-                        else
+-                            m_uiWhelpTimer -= uiDiff;
+-                    }
+-                    else
+-                    {
+-                        m_bIsSummoningWhelps = false;
+-                        m_uiSummonCount = 0;
+-                        m_uiSummonWhelpsTimer = 80000;      // 90s - 10s for summoning
+-                    }
+-                }
+-                else
++                if (!m_bIsSummoningWhelps)
+                 {
+                     if (m_uiSummonWhelpsTimer < uiDiff)
+                         m_bIsSummoningWhelps = true;
+@@ -423,16 +582,29 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
                          m_uiSummonWhelpsTimer -= uiDiff;
                  }
  
 -                if (m_uiSummonGuardTimer < uiDiff)
--                {
++                // if moving, don´t cast fireball
++                if (CheckOnyxiaMovement())
++                    return;
++
++                if (m_uiFireballTimer < uiDiff)
+                 {
 -                    if (!m_creature->IsNonMeleeSpellCasted(false))
 -                    {
 -                        m_creature->CastSpell(afSpawnLocations[2][0], afSpawnLocations[2][1], afSpawnLocations[2][2], SPELL_SUMMON_LAIR_GUARD, true);
 -                        m_uiSummonGuardTimer = 30000;
 -                    }
--                }
--                else
++                    if (DoCastSpellIfCan(m_creature->getVictim(), m_bIsRegularMode ? SPELL_FIREBALL : SPELL_FIREBALL_H) == CAST_OK)
++                        m_uiFireballTimer = 5000;
+                 }
+                 else
 -                    m_uiSummonGuardTimer -= uiDiff;
++                    m_uiFireballTimer -= uiDiff;            //engulfingflames is supposed to be activated by a fireball but haven't come by
++
 +                // not in 2.4.3
 +                //if (m_uiSummonGuardTimer < uiDiff)
 +                //{
@@ -259,7 +402,24 @@ index 2e9f0e1..3083f5d 100644
  
                  break;
              }
-@@ -464,6 +589,7 @@ void AddSC_boss_onyxia()
+@@ -441,6 +613,16 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
+ 
+     void SpellHitTarget(Unit* pTarget, const SpellEntry* pSpell)
+     {
++        // set threat to 0 from targets hit by fireball
++        float threat = 0;
++        if (pSpell->Id == SPELL_FIREBALL && m_creature->getVictim())
++        {
++            threat = m_creature->getThreatManager().getThreat(m_creature->getVictim());
++            m_creature->AddThreat(m_creature->getVictim(), -m_creature->getThreatManager().getThreat(m_creature->getVictim()));
++            threat = m_creature->getThreatManager().getThreat(m_creature->getVictim());
++            return;
++        }
++
+         // Check if players are hit by Onyxia's Deep Breath
+         if (pTarget->GetTypeId() != TYPEID_PLAYER || !m_pInstance)
+             return;
+@@ -464,6 +646,7 @@ void AddSC_boss_onyxia()
      pNewScript->Name = "boss_onyxia";
      pNewScript->GetAI = &GetAI_boss_onyxia;
      pNewScript->RegisterSelf();
@@ -325,7 +485,7 @@ diff --git a/scripts/kalimdor/onyxias_lair/onyxia.sql b/scripts/kalimdor/onyxias
 new file mode 100644
 --- /dev/null
 +++ b/scripts/kalimdor/onyxias_lair/Onyxia.sql
-@@ -0,0 +1,150 @@
+@@ -0,0 +1,174 @@
 +UPDATE `instance_template` SET  `ScriptName` =  'instance_onyxias_lair' WHERE  `instance_template`.`map` =249;
 +
 + -- insert lavacracks
@@ -476,4 +636,28 @@ new file mode 100644
 +INSERT INTO spell_target_position VALUES (21137, 249, -114.281258, -213.866486, -73.851128, 3.142);
 +INSERT INTO spell_target_position VALUES (21138, 249, -123.328560, -213.607910, -71.559921, 3.142);
 +INSERT INTO spell_target_position VALUES (21139, 249, -130.788300, -213.424026, -70.751007, 3.142);
++
++ -- Onyxia Eggs
++UPDATE `gameobject_template` SET  `data3` =  '17646' WHERE  `gameobject_template`.`entry` =176511;
++INSERT INTO `gameobject` (`id`, `map`, `spawnMask`, `position_x`, `position_y`, `position_z`, `orientation`, `rotation0`, `rotation1`, `rotation2`, `rotation3`, `spawntimesecs`, `animprogress`, `state`) VALUES
++(176511, 249, 1, -31.6994, -158.396, -90.8397, 5.18363, 0, 0, 0.522497, -0.852641, 25, 100, 0),
++(176511, 249, 1, -36.4949, -156.194, -91.5984, 2.06213, 0, 0, 0.857848, 0.513904, 25, 100, 1),
++(176511, 249, 1, -42.4453, -152.923, -91.4325, 2.69438, 0, 0, 0.975104, 0.221748, 25, 100, 1),
++(176511, 249, 1, -47.774, -151.177, -92.3973, 5.89331, 0, 0, 0.193708, -0.981059, 25, 100, 1),
++(176511, 249, 1, -46.774, -156.606, -92.7326, 6.21532, 0, 0, 0.0339266, -0.999424, 25, 100, 1),
++(176511, 249, 1, -41.7346, -155.462, -91.884, 0.159899, 0, 0, 0.0798643, 0.996806, 25, 100, 1),
++(176511, 249, 1, -40.1535, -161.041, -91.8245, 5.76921, 0, 0, 0.254167, -0.96716, 25, 100, 1),
++(176511, 249, 1, -34.7589, -159.301, -91.2523, 5.86189, 0, 0, 0.209093, -0.977896, 25, 100, 1),
++(176511, 249, 1, -34.2412, -164.154, -90.8013, 5.5493, 0, 0, 0.358763, -0.933429, 25, 100, 1),
++(176511, 249, 1, -45.6113, -162.195, -92.2996, 2.90486, 0, 0, 0.993003, 0.118088, 25, 100, 1),
++(176511, 249, 1, -30.9132, -266.72, -90.3067, 4.96261, 0, 0, 0.613346, -0.789815, 25, 100, 1),
++(176511, 249, 1, -35.9512, -272.404, -91.6414, 4.40497, 0, 0, 0.807031, -0.590509, 25, 100, 1),
++(176511, 249, 1, -42.9811, -274.373, -91.7919, 4.03348, 0, 0, 0.902204, -0.431309, 25, 100, 1),
++(176511, 249, 1, -31.8641, -269.746, -90.8129, 0.043652, 0, 0, 0.0218243, 0.999762, 25, 100, 1),
++(176511, 249, 1, -35.1182, -263.167, -90.7635, 2.28911, 0, 0, 0.910525, 0.413453, 25, 100, 1),
++(176511, 249, 1, -35.1179, -268.087, -91.0571, 4.21961, 0, 0, 0.858217, -0.513287, 25, 100, 1),
++(176511, 249, 1, -40.1222, -268.439, -91.7981, 5.28461, 0, 0, 0.478799, -0.877925, 25, 100, 1),
++(176511, 249, 1, -39.8621, -262.394, -91.1835, 0.2455, 0, 0, 0.122442, 0.992476, 25, 100, 1),
++(176511, 249, 1, -45.5056, -266.589, -92.2551, 0.0876324, 0, 0, 0.0438022, 0.99904, 25, 100, 1),
++(176511, 249, 1, -48.1046, -271.488, -93.0571, 0.119048, 0, 0, 0.059489, 0.998229, 25, 100, 1);
 +
