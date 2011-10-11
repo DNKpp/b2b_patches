@@ -82,7 +82,7 @@ diff --git a/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.sql b/script
 new file mode 100644
 --- /dev/null
 +++ b/scripts/eastern_kingdoms/blackwing_lair/blackwing_lair.sql
-@@ -0,0 +1,23 @@
+@@ -0,0 +1,69 @@
 + -- Doors:
 + -- razorgore doors template
 +UPDATE `gameobject_template` SET  `flags` =  '4', `size` =  '2' WHERE  `gameobject_template`.`entry` =176964;
@@ -105,5 +105,41 @@ new file mode 100644
 +UPDATE `gameobject_template` SET  `flags` =  '4', `size` =  '2' WHERE  `gameobject_template`.`entry` =179117;
 +
 + -- Set respawn to 7 days
-+UPDATE `creature` SET  `spawntimesecs` =  '36288000' WHERE  `creature`.`map` =469;
++UPDATE `creature` SET  `spawntimesecs` =  '604800' WHERE  `creature`.`map` =469;
++
++ -- Delete mobs in razorgore room
++DELETE FROM `creature` WHERE `creature`.`guid` = 84403;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84405;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84437;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84439;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84487;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84489;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84496;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84392;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84493;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84494;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84503;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84436;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84484;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84486;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84393;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84404;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84444;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84505;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84509;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84510;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84511;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84495;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84432;
++DELETE FROM `creature` WHERE `creature`.`guid` = 84406;
++
++ -- door spawns
++INSERT INTO `gameobject` (`id`, `map`, `spawnMask`, `position_x`, `position_y`, `position_z`, `orientation`, `rotation0`, `rotation1`, `rotation2`, `rotation3`, `spawntimesecs`, `animprogress`, `state`) VALUES
++(176964, 469, 1, -7639.63, -1084.08, 408.491, 0.633473, 0, 0, 0.311467, 0.950257, 25, 100, 0);
++(176965, 469, 1, -7552.3, -1023.03, 408.49, 3.75935, 0, 0, 0.952675, -0.303992, 25, 100, 1);
++(179115, 469, 1, -7505.83, -1043.15, 476.554, 0.618874, 0, 0, 0.304522, 0.952505, 25, 100, 1);
++(179116, 469, 1, -7454.81, -1052.61, 476.554, 5.42159, 0, 0, 0.417597, -0.908633, 25, 100, 0);
++(179117, 469, 1, -7467.23, -1135.59, 476.535, 2.14865, 0, 0, 0.879268, 0.476327, 25, 100, 1);
++(179364, 469, 1, -7520.71, -971.575, 423.429, 5.39347, 0, 0, 0.43033, -0.902672, 25, 100, 1);
++(179365, 469, 1, -7565.39, -1029.12, 449.142, 0.602531, 0, 0, 0.296729, 0.954962, 25, 100, 1);
 +

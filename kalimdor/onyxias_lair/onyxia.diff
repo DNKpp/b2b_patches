@@ -1,5 +1,5 @@
 diff --git a/scripts/kalimdor/onyxias_lair/boss_onyxia.cpp b/scripts/kalimdor/onyxias_lair/boss_onyxia.cpp
-index 2e9f0e1..f2c632c 100644
+index 2e9f0e1..cd2131b 100644
 --- a/scripts/kalimdor/onyxias_lair/boss_onyxia.cpp
 +++ b/scripts/kalimdor/onyxias_lair/boss_onyxia.cpp
 @@ -36,13 +36,15 @@ enum
@@ -69,7 +69,7 @@ index 2e9f0e1..f2c632c 100644
      bool m_bIsSummoningWhelps;
  
 +    // store lavacrack guids
-+    GUIDList m_CrackList;
++    std::vector<ObjectGuid> m_CrackList;
 +    bool m_bDoErruption;
 +
      void Reset()
@@ -152,7 +152,7 @@ index 2e9f0e1..f2c632c 100644
      void SummonedMovementInform(Creature* pSummoned, uint32 uiMoveType, uint32 uiPointId)
      {
          if (uiMoveType != POINT_MOTION_TYPE || uiPointId != 1 || !m_creature->getVictim())
-@@ -260,24 +310,157 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
+@@ -260,24 +310,151 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
          }
      }
  
@@ -169,15 +169,9 @@ index 2e9f0e1..f2c632c 100644
 +            // iterate lavacracks, summon trigger and cast spell
 +            else
 +            {
-+                for (uint8 i = 0; i < 5 ; i++)
++                for (uint8 i = 0; i < 5 && !m_CrackList.empty(); i++)
 +                {
-+                    GUIDList::const_iterator itr = m_CrackList.begin();
-+                    for (uint32 rndCount = urand(0, m_CrackList.size() - 1); itr != m_CrackList.end() && rndCount > 0; ++itr)
-+                        rndCount--;
-+
-+                    if (itr == m_CrackList.end())
-+                        break;
-+
++                    std::vector<ObjectGuid>::iterator itr = m_CrackList.begin() + urand(0, m_CrackList.size() - 1);
 +                    WorldObject *Caster = m_creature->GetMap()->GetWorldObject(*itr);
 +                    if (Caster)
 +                    {
@@ -197,7 +191,7 @@ index 2e9f0e1..f2c632c 100644
 +                    m_bDoErruption = false;
 +                }
 +                return;
-+            } 
++            }
 +        }
 +    }
 +
@@ -311,7 +305,7 @@ index 2e9f0e1..f2c632c 100644
                  if (m_uiFlameBreathTimer < uiDiff)
                  {
                      if (DoCastSpellIfCan(m_creature->getVictim(), m_bIsRegularMode ? SPELL_FLAMEBREATH : SPELL_FLAMEBREATH_H) == CAST_OK)
-@@ -348,6 +531,13 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
+@@ -348,6 +525,13 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
  
                      SetCombatMovement(true);
                      m_creature->GetMotionMaster()->MoveChase(m_creature->getVictim());
@@ -325,7 +319,7 @@ index 2e9f0e1..f2c632c 100644
                      return;
                  }
  
-@@ -384,38 +574,7 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
+@@ -384,38 +568,7 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
                  else
                      m_uiMovementTimer -= uiDiff;
  
@@ -365,7 +359,7 @@ index 2e9f0e1..f2c632c 100644
                  {
                      if (m_uiSummonWhelpsTimer < uiDiff)
                          m_bIsSummoningWhelps = true;
-@@ -423,16 +582,29 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
+@@ -423,16 +576,29 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
                          m_uiSummonWhelpsTimer -= uiDiff;
                  }
  
@@ -402,7 +396,7 @@ index 2e9f0e1..f2c632c 100644
  
                  break;
              }
-@@ -441,6 +613,11 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
+@@ -441,6 +607,11 @@ struct MANGOS_DLL_DECL boss_onyxiaAI : public ScriptedAI
  
      void SpellHitTarget(Unit* pTarget, const SpellEntry* pSpell)
      {
@@ -414,7 +408,7 @@ index 2e9f0e1..f2c632c 100644
          // Check if players are hit by Onyxia's Deep Breath
          if (pTarget->GetTypeId() != TYPEID_PLAYER || !m_pInstance)
              return;
-@@ -464,6 +641,7 @@ void AddSC_boss_onyxia()
+@@ -464,6 +635,7 @@ void AddSC_boss_onyxia()
      pNewScript->Name = "boss_onyxia";
      pNewScript->GetAI = &GetAI_boss_onyxia;
      pNewScript->RegisterSelf();
@@ -444,7 +438,7 @@ index f7dde0a..cedbdb7 100644
  {
      if (uiType != TYPE_ONYXIA)
 diff --git a/scripts/kalimdor/onyxias_lair/onyxias_lair.h b/scripts/kalimdor/onyxias_lair/onyxias_lair.h
-index 2f493a7..8b34d61 100644
+index 2f493a7..4f062cb 100644
 --- a/scripts/kalimdor/onyxias_lair/onyxias_lair.h
 +++ b/scripts/kalimdor/onyxias_lair/onyxias_lair.h
 @@ -16,6 +16,8 @@ enum
@@ -462,7 +456,7 @@ index 2f493a7..8b34d61 100644
          void OnCreatureCreate(Creature* pCreature);
 +        void OnObjectCreate(GameObject* pGO);
 +
-+        const GUIDList& GetLavacrackList() { return m_LavacrackGUIDs; }
++        const std::vector<ObjectGuid>& GetLavacrackList() { return m_LavacrackGUIDs; }
  
          void SetData(uint32 uiType, uint32 uiData);
  
@@ -471,7 +465,7 @@ index 2f493a7..8b34d61 100644
  
          time_t m_tPhaseTwoStart;
 +
-+        GUIDList m_LavacrackGUIDs;
++        std::vector<ObjectGuid> m_LavacrackGUIDs;
  };
  
  #endif
@@ -479,7 +473,7 @@ index 2f493a7..8b34d61 100644
 diff --git a/scripts/kalimdor/onyxias_lair/onyxia.sql b/scripts/kalimdor/onyxias_lair/onyxia.sql
 new file mode 100644
 --- /dev/null
-+++ b/scripts/kalimdor/onyxias_lair/Onyxia.sql
++++ b/scripts/kalimdor/onyxias_lair/onyxia.sql
 @@ -0,0 +1,174 @@
 +UPDATE `instance_template` SET  `ScriptName` =  'instance_onyxias_lair' WHERE  `instance_template`.`map` =249;
 +

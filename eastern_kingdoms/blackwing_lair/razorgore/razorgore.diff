@@ -1,5 +1,5 @@
 diff --git a/scripts/eastern_kingdoms/blackwing_lair/boss_razorgore.cpp b/scripts/eastern_kingdoms/blackwing_lair/boss_razorgore.cpp
-index a7b0f74..5406169 100644
+index a7b0f74..6d44ce5 100644
 --- a/scripts/eastern_kingdoms/blackwing_lair/boss_razorgore.cpp
 +++ b/scripts/eastern_kingdoms/blackwing_lair/boss_razorgore.cpp
 @@ -16,13 +16,14 @@
@@ -19,7 +19,7 @@ index a7b0f74..5406169 100644
  
  // Razorgore Phase 2 Script
  enum
-@@ -38,13 +39,411 @@ enum
+@@ -38,13 +39,408 @@ enum
      SPELL_WARSTOMP              = 24375,
      SPELL_FIREBALL_VOLLEY       = 22425,
      SPELL_CONFLAGRATION         = 23023,
@@ -128,14 +128,12 @@ index a7b0f74..5406169 100644
 +            m_pInstance->SetData(TYPE_RAZORGORE, FAIL);
 +        }
 +    }
-+    
++
 +    ScriptedInstance* m_pInstance;
 +
 +    uint32 m_uiAddSummonTimer;
 +    uint32 m_uiEggCounter;
 +    Phases m_Phase;
-+
-+    bool m_bIsCharmed;
 +
 +    std::list<ObjectGuid> m_uiDragonkinGUIDs;
 +    std::list<ObjectGuid> m_uiOrkGUIDs;
@@ -143,7 +141,6 @@ index a7b0f74..5406169 100644
 +
 +    void Reset()
 +    {
-+        m_bIsCharmed            = false;
 +        m_uiEggCounter          = 0;
 +
 +        if (m_pInstance && m_pInstance->GetData(TYPE_RAZORGORE) != DONE)
@@ -297,13 +294,13 @@ index a7b0f74..5406169 100644
 +        for (std::list<ObjectGuid>::iterator itr = m_uiDragonkinGUIDs.begin(); itr != m_uiDragonkinGUIDs.end(); ++itr)
 +        {
 +            if (Creature *pCreature = m_creature->GetMap()->GetCreature(*itr))
-+                m_creature->RemoveFromWorld();
++                pCreature->RemoveFromWorld();
 +        }
 +
 +        for (std::list<ObjectGuid>::iterator itr = m_uiOrkGUIDs.begin(); itr != m_uiOrkGUIDs.end(); ++itr)
 +        {
 +            if (Creature *pCreature = m_creature->GetMap()->GetCreature(*itr))
-+                m_creature->RemoveFromWorld();
++                pCreature->RemoveFromWorld();
 +        }
 +        m_uiDragonkinGUIDs.clear();
 +        m_uiOrkGUIDs.clear();
@@ -320,7 +317,7 @@ index a7b0f74..5406169 100644
 +        case NPC_BLACKWING_MAGE:
 +            m_uiOrkGUIDs.remove(pCreature->GetObjectGuid());
 +            break;
-+        }            
++        }
 +    }
 +
 +    void JustExceededSpawnDelay(Creature *pCreature)
@@ -431,7 +428,7 @@ index a7b0f74..5406169 100644
          Reset();
      }
  
-@@ -57,32 +456,53 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
+@@ -57,32 +453,55 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
  
      void Reset()
      {
@@ -488,24 +485,15 @@ index a7b0f74..5406169 100644
 +        {
              m_pInstance->SetData(TYPE_RAZORGORE, FAIL);
 +            if (Creature *pOrbTrigger = m_pInstance->GetSingleCreatureFromStorage(NPC_ORB_TRIGGER))
++            {
 +                if (mob_blackwing_orb_triggerAI *pTriggerAI = (mob_blackwing_orb_triggerAI*)pOrbTrigger->AI())
 +                    pTriggerAI->Reset();
++            }
 +        }
      }
  
      void UpdateAI(const uint32 uiDiff)
-@@ -90,6 +510,10 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
-         if (!m_creature->SelectHostileTarget() || !m_creature->getVictim())
-             return;
- 
-+        if (Creature *pOrbTrigger = m_pInstance->GetSingleCreatureFromStorage(NPC_ORB_TRIGGER))
-+            if (mob_blackwing_orb_triggerAI *pTriggerAI = (mob_blackwing_orb_triggerAI*)pOrbTrigger->AI())
-+                pTriggerAI->m_bIsCharmed = false;
-+
-         // Cleave
-         if (m_uiCleaveTimer < uiDiff)
-         {
-@@ -121,7 +545,7 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
+@@ -121,7 +540,7 @@ struct MANGOS_DLL_DECL boss_razorgoreAI : public ScriptedAI
          if (m_uiConflagrationTimer < uiDiff)
          {
              if (DoCastSpellIfCan(m_creature, SPELL_CONFLAGRATION) == CAST_OK)
@@ -514,7 +502,7 @@ index a7b0f74..5406169 100644
          }
          else
              m_uiConflagrationTimer -= uiDiff;
-@@ -144,12 +568,187 @@ CreatureAI* GetAI_boss_razorgore(Creature* pCreature)
+@@ -144,12 +563,186 @@ CreatureAI* GetAI_boss_razorgore(Creature* pCreature)
      return new boss_razorgoreAI(pCreature);
  }
  
@@ -645,7 +633,6 @@ index a7b0f74..5406169 100644
 +            return true;
 +
 +        pCreature->AddThreat(pPlayer, 50000);
-+        pTriggerAI->m_bIsCharmed = true;
 +        pPlayer->CastSpell(pCreature, SPELL_DRAGON_ORB, true);
 +    }
 +    else
@@ -709,9 +696,10 @@ diff --git a/scripts/eastern_kingdoms/blackwing_lair/razorgore.sql b/scripts/eas
 new file mode 100644
 --- /dev/null
 +++ b/scripts/eastern_kingdoms/blackwing_lair/razorgore.sql
-@@ -0,0 +1,22 @@
+@@ -0,0 +1,23 @@
 + -- Orb of Domination Template
 +UPDATE `gameobject_template` SET  `data10` =  '0', `size` =  '2', `ScriptName` =  'go_orb_of_domintaion' WHERE  `gameobject_template`.`entry` =177808;
++INSERT INTO `gameobject` (`id`, `map`, `spawnMask`, `position_x`, `position_y`, `position_z`, `orientation`, `rotation0`, `rotation1`, `rotation2`, `rotation3`, `spawntimesecs`, `animprogress`, `state`) VALUES (177808, 469, 1, -7617.23, -1022.97, 413.382, 5.36155, 0, 0, 0.444679, -0.89569, 25, 100, 1);
 +
 + -- Grethok the Controller
 +UPDATE `creature_template` SET  `ScriptName` =  'npc_grethok' WHERE  `creature_template`.`entry` =12557;
@@ -727,7 +715,7 @@ new file mode 100644
 +
 + -- blackwing orb trigger
 +UPDATE `creature_template` SET  `flags_extra` = '128', `ScriptName` =  'mob_blackwing_orb_trigger' WHERE  `creature_template`.`entry` =14449;
-+INSERT INTO `creature` (`id`, `map`, `spawnMask`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `DeathState`, `MovementType`) VALUES (14449, 469, 1, 0, 0, -7617.23, -1022.97, 413.382, 5.37357, 25, 5, 0, 64, 0, 0, 0);
++INSERT INTO `creature` (`id`, `map`, `spawnMask`, `modelid`, `equipment_id`, `position_x`, `position_y`, `position_z`, `orientation`, `spawntimesecs`, `spawndist`, `currentwaypoint`, `curhealth`, `curmana`, `DeathState`, `MovementType`) VALUES (14449, 469, 1, 0, 0, -7617.23, -1022.97, 413.382, 5.37357, 5, 0, 0, 64, 0, 0, 0);
 +
 +
 + -- MC & Possesss & Destroy Eggs
